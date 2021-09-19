@@ -1,0 +1,126 @@
+Cargar el ejemplo de blinking-led usando el led de la tarjeta
+
+Primero debemos ir a la carpeta de nuttx
+
+cd nuttxspace/nuttx/
+
+Y limpiamos las configuraciones anteriores
+
+make distclean
+
+Nos dirigimos a la carpeta tools 
+
+cd nuttxspace/nuttx/tools/
+
+Ahora configuramos la tarjeta para el ejemplo de led
+
+./configure.sh stm32f103-minimum/nsh
+
+-------------------------------------
+
+Salimos de la carpeta y ejecutamos el menu
+
+cd ..
+
+make menuconfig
+
+-------------------------------------
+
+system type >>
+toolchain selection >>
+generic gnu eabi toolchain under linux
+
+system type >>
+smt32 peripheral support >>
+usb device activado
+
+board selection >>
+enable usb device controls activado
+board led status support desactivado
+
+device drivers >>
+usb device driver support >>
+usb modem cdc/acd >>
+cdc/acd console device activado
+
+device driver >>
+serial driver support >>
+no serial console
+
+device drivers>>
+led support>>
+led driver activado
+
+application configuration>>
+examples>>
+hello example activado
+
+El siguiente codigo debe estar en el archivo.c de hello example para que funcione el ejemplo
+
+-------------------------------------
+
+FILE *myfile;
+	while(1){ 
+		// On-off
+		myfile = fopen("/dev/userleds", "wb");
+		putc(0x00, myfile);
+		fclose(myfile);
+		sleep(1);
+		//Off-on
+		myfile = fopen("/dev/userleds", "wb");
+  		putc(0x01, myfile);
+		fclose(myfile);
+		sleep(1);
+	}
+
+-------------------------------------
+
+application configuration>>
+nsh library>>
+disable individual commands>>
+disable printf desactivado
+
+Y se salva
+
+-------------------------------------
+
+Nos dirigimos al archivo nuttx/configs/stm32f103-minimum/src/stm32f103_minimum.h y modificamos la parte del else (C13) por el pin que se haya escogido (p.ej. A1, B12, etc):
+
+#ifdef CONFIG_STM32F103MINIMUM_BLACKPILL
+#  define GPIO_LED1         (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
+                            GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN12)
+#else
+#  define GPIO_LED1         (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
+                             GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN13)
+
+-------------------------------------
+
+Hacemos la compilacion
+
+make
+
+Flasheamos la tarjeta
+
+openocd -f interface/stlink.cfg -f target/stm32f1x.cfg -c init -c "reset halt" -c "flash write_image erase nuttx.bin 0x08000000"
+
+-------------------------------------
+
+Abrimos minicom y ejecutamos el ejemplo
+
+minicom
+
+>?
+
+>hello
+
+-------------------------------------
+
+Tambien se puede prender y apagar manualmente mediante los siguientes comandos
+
+prender
+printf 0x00 > /dev/userleds
+
+apagar
+printf 0x01 > /dev/userleds
+
+NOTA. Con el led externo funciona al reves (0 apagar, 1 prender)

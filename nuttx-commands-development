@@ -1,0 +1,236 @@
+
+Paqueterias para NuttX y programador OpenOCD
+
+sudo apt-get install automake bison build-essential flex gcc-arm-none-eabi gperf git libncurses5-dev libtool libusb-dev libusb-1.0.0-dev pkg-config minicom
+
+-----------------------------------------
+
+Crear directorio para instalar los repositorios 
+
+mkdir nuttxspace/
+
+cd nuttxspace/
+
+-----------------------------------------
+
+Descargar repositorio de OpenOCD (OPEN ON CHIP DEBUGGER) 
+programador y debuger, utilizado para flashear algunas tarjetas. https://elinux.org/OpenOCD
+
+git clone http://repo.or.cz/r/openocd.git
+
+Dentro del directorio de openocd ejecutar bootstrap de openocd para crear el archivo de configuracion 
+
+cd nuttxspace/openocd/
+
+./bootstrap
+
+Se configuran y habilitan los programadores soportados por OpenOCD
+
+./configure --enable-internal-jimtcl --enable-maintainer-mode --disable-werror --disable-shared --enable-stlink --enable-jlink --enable-rlink --enable-vslink --enable-ti-icdi --enable-remote-bitbang
+
+Se compila OPENOCD 
+
+make
+
+Finalizamos la instalacion con 
+
+sudo make install
+
+----------------------------------
+
+REPOSITORIOS DE NUTTX 
+
+regresamos a directorio principal de nuttx 
+
+cd nuttxspace/
+
+Principales repositorios a clonar en el directorio de nuttx
+
+git clone https://bitbucket.org/nuttx/nuttx
+git clone https://bitbucket.org/nuttx/apps
+git clone https://bitbucket.org/nuttx/tools
+
+-----------------------------------------
+
+Se hacen las configuraciones para tools
+
+cd nuttxspace/tools/kconfig-frontends/
+
+./configure
+
+Se compila las configuraciones hechas previamente
+
+make
+
+Finaliza la instalacion
+
+sudo make install
+
+Se crean los enlaces necesarios
+
+sudo ldconfig
+
+-----------------------------------------
+
+NOTA. Para hacer una aplicacion propia se deben tener 4 files, el .c, el kconfig, el makefile y el make.defs
+
+Sitio importante >> nuttx/configs/ aqui se encuentran los archivos de las tarjetas
+
+-----------------------------------------
+
+Configurar la tarjeta
+
+cd nuttxspace/nuttx/tools/
+
+./configure.sh stm32f103-minimum/nsh
+
+El comando anterior se ejecuta cada vez que se quiera correr una aplicacion nueva o se utilice una nueva tarjeta
+
+Se ejecuta despues de un 'make distclean' si anteriormente ya se cargo o utilizo una aplicacion
+
+-----------------------------------------
+
+Se recomienda que se compile y ejecute nutshell, interfaz principal para ejecutar aplicaciones donde solo se selecciona la aplicacion que se quiere ejecutar
+
+-----------------------------------------
+
+cd nuttxspace/nuttx/
+
+make menuconfig
+
+Dentro de este menu seleccionar
+
+build setup >>
+build host platform (linux) activado, debe decir linux
+binary output formats >>
+raw binary activado
+
+system type >>
+toolchain selection >>
+generic gnu eabi toolchain under linux
+
+system type >>
+smt32 peripheral support >>
+usb device activado
+
+board selection >>
+enable boardctl() interface activado
+enable usb device controls activado
+
+device drivers >>
+usb device driver support >>
+usb modem cdc/acd >>
+cdc/acd console device activado
+
+device driver >>
+serial driver support >>
+no serial console
+
+networking support >>
+networking support desactivado
+
+application support >>
+examples >>
+hello world activado
+
+Y se salva 
+
+-----------------------------------------
+
+Code Blocks
+
+build setup>>
+debug options>>
+optimization level>> supress
+
+build setup>>
+debug options>>
+generate debug symbols
+
+
+-----------------------------------------
+
+Volvemos a la consola y compilamos
+
+cd nuttxspace/nuttx/
+
+make
+
+-----------------------------------------
+
+Despues copiamos las reglas para compilar con los siguientes comandos
+
+cd nuttxspace/openocd/contrib/
+
+sudo cp 60-openocd.rules /etc/udev/rules.d/
+
+sudo udevadm trigger 
+
+-----------------------------------------
+
+Dentro de la carpeta de nuttx
+
+cd nuttxspace/nuttx/
+
+openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg
+
+openocd -f interface/stlink.cfg -f target/stm32f1x.cfg
+
+openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c init -c "reset halt" -c "flash write_image erase nuttx.bin 0x08000000"
+
+openocd -f interface/stlink.cfg -f target/stm32f1x.cfg -c init -c "reset halt" -c "flash write_image erase nuttx.bin 0x08000000"
+
+Si ocurre un error en los pasos anteriores un posible solucion es  simplemente en la consola ctrl+c mantener presionado el boton de reset de la tarjeta y volver a ejecutar el comando, cuando todo salga ok liberar el boton
+
+-----------------------------------------
+
+Configuracion de minicom
+
+Instalar minicom
+
+sudo apt install minicom
+
+Verificar el puerto al que esta conectado 
+
+dmesg
+
+Configurar el puerto para escuchar y guardarlo como default
+
+sudo minicom -s
+
+serial port setup>>
+A-serial device /dev/ttyACM0
+F-hardware flow control no
+
+save setup as dfl
+
+Dentro de minicom presionar 3 veces enter para ver la consola nuttshell NSH de nuttx y poner un signo de interrogacion (?) para ver las opciones
+
+nsh> ?
+
+Ahi debera de salirnos una etiqueta que muestre las builtin apps, por ejemplo hello, si ponemos hello y damos enter se ejecutara la app con ese nombre.
+
+nsh> hello
+Hello, World!!
+
+
+
+
+
+
+Resources
+
+1
+https://www.youtube.com/watch?v=heSkSd-_70g
+
+2
+https://www.youtube.com/watch?v=Pi8IAFp3pVw&t=10s
+
+3
+https://www.youtube.com/watch?v=39lntX-8tfk&t=200s
+
+4
+https://www.youtube.com/watch?v=rgZJPZh_po8&feature=youtu.be
+
+http://nuttx.org/doku.php?id=wiki:nshhowtos:nshapplications
+
